@@ -1,0 +1,23 @@
+{
+  "name": "customize-pi",
+  "version": "1.4.0",
+  "description": "Pi customization skill: settings, MCP and codemode, extensions, skills, prompt templates, themes, Pi packages, models/auth, trust, sessions, Windows terminal setup",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "agent-skills",
+    "skill"
+  ],
+  "files": [
+    "SKILL.md",
+    "references",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "pi": {
+    "skills": [
+      "./"
+    ]
+  }
+}
