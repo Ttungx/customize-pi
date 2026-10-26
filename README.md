@@ -63,5 +63,6 @@ detail.
    `https://pi.dev/schemas/`).
 3. Update the affected reference file first, then `SKILL.md` if a default,
    command, or invariant changed.
-4. Bump `version` here and in `SKILL.md`, add a `CHANGELOG.md` entry, and tag
-   the release to match Pi.
+4. Set the `version` entry under `metadata` in `SKILL.md` and `version` here,
+   add a `CHANGELOG.md` entry, and tag the release to match Pi. Validate with
+   skill-creator's `quick_validate.py`, which rejects unknown top-level keys.

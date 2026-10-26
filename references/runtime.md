@@ -73,6 +73,16 @@ reference for every provider, model, override, and compatibility field, so
 prefer it over guessing a key. Run `pi update --models` to refresh the catalog;
 cached catalog data works offline.
 
+## Local models
+
+llama.cpp is integrated rather than configured through `models.json`: start
+`llama-server` without `--model` so it runs as a router, connect with
+`/login llama.cpp` (default `http://127.0.0.1:8080`), and load a GGUF with
+`/llama` before selecting it in `/model`, because only loaded models appear
+there. The built-in extension is `builtin:llama.cpp`, and
+`--no-models-autoload` keeps loading explicit. For Ollama, LM Studio, vLLM,
+SGLang, and proxies, use a compatible endpoint in `models.json` instead.
+
 ## Model types
 
 | Type | Reached through | Notes |

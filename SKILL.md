@@ -1,6 +1,7 @@
 ---
 name: customize-pi
-version: 1.4.0
+metadata:
+  version: "1.4.0"
 description: "Customize the Pi coding agent (pi.dev) — settings.json, keybindings.json, mcp.json and MCP OAuth, models.json, providers/auth, codemode, extensions, skills, prompt templates, themes, Pi packages, project trust, sessions, and terminal/Windows setup. Use this skill whenever the user wants to change, add, fix, migrate, review, or explain any Pi configuration or Pi-native resource, including files under ~/.pi/agent/, a project .pi/, ~/.agents/skills/, or project .agents/skills/, and whenever a Pi command or behavior misbehaves (`pi mcp`, `/mcp`, `/settings`, `/model`, `/reload`, trust prompts, fullscreen TUI, shell selection, package loading). Covers Pi 1.4. Do not use it for the user's application code or for configuring a different agent such as Claude Code, Codex, or opencode."
 ---
 
@@ -19,8 +20,11 @@ made theme objects strict, 1.4 changed what `compaction.reserveTokens` means.
 So treat every exact field, default, and command here as "verified at 1.4.0,
 confirm again if `pi --version` reports something newer".
 
-The frontmatter `version` mirrors the Pi release this skill documents, so the
-installed skill, the git tag, and the Pi changelog stay readable as one series.
+The `version` entry under `metadata` mirrors the Pi release this skill
+documents, so the installed skill, the git tag, and the Pi changelog stay
+readable as one series. It lives under `metadata` because the Agent Skills frontmatter allows
+only `name`, `description`, `license`, `compatibility`, `metadata`,
+`allowed-tools`, and `disable-model-invocation`.
 Bump it together with the references whenever Pi ships a release; a mismatch
 between `version` and `pi --version` is the signal to re-check the details
 before editing a user's configuration.
@@ -57,17 +61,83 @@ Two maintenance shortcuts are easy to forget:
 
 - `references/configuration.md`: paths, scope and precedence, project trust,
   every settings group with defaults, tool selection, compaction, reload matrix,
-  environment variables.
+  environment variables, non-interactive runs, migration.
 - `references/mcp-and-codemode.md`: `mcp.json`, project overrides, exposure,
   OAuth, resource tools, and the codemode script API and limits.
-- `references/resources.md`: skills, prompt templates, themes, Pi packages.
-- `references/runtime.md`: models, `models.json`, providers and auth, classifier
-  and image models, virtual models, the extension API.
+- `references/resources.md`: skills, prompt templates, context and system-prompt
+  files, themes, Pi packages.
+- `references/runtime.md`: models, `models.json`, providers and auth, local
+  models, classifier and image models, virtual models, the extension API.
 - `references/security-and-windows.md`: trust and isolation, native Windows
   shells, fullscreen terminal behavior, keybindings, session commands.
 
 If the user asks for a report, diagnosis, or review rather than an edit, do not
 modify files. Show evidence, paths, a proposed diff, and residual risks.
+
+## Choose the mechanism
+
+Users usually arrive with a goal, not a file name. Decide the mechanism before
+the path: the cheapest mechanism that satisfies the goal is also the one with
+the fewest moving parts to audit and undo.
+
+| The goal | Put it in | Why |
+|---|---|---|
+| Standing behavior and conventions | `AGENTS.md`, or `AGENTS.override.md` to replace it | Context files apply to the directory and everything below it, and load without trust |
+| Replace Pi's default system prompt | `SYSTEM.md` | Replaces rather than appends |
+| Add rules to the system prompt | `APPEND_SYSTEM.md` | Keeps the default prompt |
+| A repeatable procedure with bundled files | a skill (`SKILL.md`) | Metadata routes it; body and references load on demand |
+| A reusable prompt the user triggers | a prompt template | Becomes a slash command with arguments, no executable behavior |
+| A preference, default, or tool selection | `settings.json` | Schema-validated, and `/settings` writes it |
+| A key binding or a palette | `keybindings.json`, `themes/<name>.json` | Hot-reload or `/reload`, no code |
+| New executable behavior: tool, command, provider, UI | an extension | Needs the runtime, and runs with the user's OS permissions |
+| Shipping any of the above to other people | a Pi package | One install, declared resources, pinned ref |
+| Trying something without touching the real configuration | `PI_CODING_AGENT_DIR`, `pi -e <source>` | Isolated scope, easy to discard |
+
+When two mechanisms both work, prefer the one lower in that table: it is
+cheaper to review, revert, and explain.
+
+## Diagnose before changing
+
+A user who says "it doesn't work" is asking for a diagnosis. Adding
+configuration on top of a file Pi never loaded makes it worse, so decide which
+layer failed — scope, trust, load, or override — before editing anything.
+
+| Symptom | Check first | Usual cause |
+|---|---|---|
+| A setting has no effect | Which file defines it (`pi config`, `/settings`), and whether Pi reloaded since | Project overrides user; CLI flags override both; manual edits need `/reload`; startup defaults only affect new sessions |
+| A tool is missing, or came back after removal | `/session`, `pi config`, the `--tools`/`--exclude-tools` used to start | Resumed sessions restore their active tools; `-name` survives `/reload`; plain `--tools` names replace rather than add |
+| A skill, template, or theme is not listed, or a skill never triggers | `/reload`, the startup resource listing, `pi config` | Missing description, name collision, wrong directory, project trust, extra keys in a strict theme, a theme file not named `<name>.json`, or a description too vague to route (`/skill:name` forces it) |
+| An extension's tool or command is missing | `pi config` for the resource list and scope, then startup diagnostics | Disabled through `-builtin:`, `--no-extensions`, or a package filter; a load error; or a tool registered inactive that nothing activates |
+| An MCP server shows no tools | `pi mcp list` (exits 1 on failure), then `/mcp` for the error and stderr tail | `enabled: false`, untrusted `.pi/mcp.json`, rejected SSE URL, name collision, or a `codemode`/`deferred` tool that was never declared by design |
+| MCP sign-in repeats or silently loses access | the sign-in state in `/mcp`, then the server's `oauth` entry | Scope mismatch, `authServerMetadataUrl` naming the wrong issuer, or client registration the server refuses |
+| A model is absent from `/model` | `pi auth check --provider <id>`, then the catalog | No usable credential, a `models.json` override, or an image/classifier model that only codemode can reach |
+| Rendering or transcript state looks wrong | `/debug`, which writes rendered lines and messages to `pi-debug.log` in the agent directory | Capability misdetection or stale session state |
+
+Verification is part of the fix: after the change, confirm the surface saw it
+(`pi config`, `pi list`, `pi mcp list`, `/hotkeys`, `/session`) instead of
+assuming `/reload` covered it.
+
+## Audit an existing configuration
+
+"Review my setup" is read-only work: gather evidence, then propose the smallest
+diff. Read the files that actually exist rather than the ones the docs mention,
+because most real problems are contradictions between scopes.
+
+- Two scopes disagree: project settings override user settings and resource
+  lists combine, so a "broken" value is often shadowed rather than ignored.
+- Legacy keys: `queueMode` and `websockets` were migrated to `steeringMode` and
+  `transport`; write the current name and keep what the old value meant.
+- Secrets in the wrong place: tokens in project settings, `mcp.json`, a skill, or
+  anything committed. They belong in `/login`, `auth.json`, `${ENV}`, or a
+  whole-value `!command`.
+- Executable input nobody reviewed: project extensions, packages, MCP servers,
+  and skills run with the user's permissions after one trust click.
+- Cost and context pressure: `cacheWarming: "idle"` refreshes between runs and
+  costs money, oversized context files are resent every turn, and tools that are
+  always declared could be `codemode` or `deferred` instead.
+- Stale session scope: changing defaults does not rewrite a resumed session's
+  tools, model, or thinking level, so the user may still be running yesterday's
+  configuration.
 
 ## Locations and scope
 
@@ -120,6 +190,9 @@ Apply deliberately:
 - Keep secrets out of anything that is copied verbatim or committed: use
   `/login`, `auth.json`, `${ENV_VAR}` interpolation, or a whole-value
   `!command`. Never paste a token into a project file, skill, or report.
+- Keep changes reversible: back up the file first, prefer additive switches
+  (`-name`, `enabled: false`, resource filters) over deletion, and tell the user
+  how to undo the edit without hunting for the old value.
 - Back up a file before a risky migration, keep the diff minimal, validate JSON,
   then run a read-only check (`pi list`, `pi mcp list`, `pi config`) when one
   applies.

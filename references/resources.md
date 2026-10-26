@@ -64,6 +64,30 @@ argument. Extensions see raw input through the `input` event first, unless an
 extension command with the same name handles it. Templates add prompt text; use
 an extension for state, tools, events, or UI. Run `/reload` after changes.
 
+## Context and system-prompt files
+
+These change what the model knows and how it is instructed without adding a
+tool or a command, which makes them the cheapest way to shape behavior — and
+the easiest to overuse.
+
+| File | Effect |
+|---|---|
+| `AGENTS.md`, `CLAUDE.md` | Instructions from the agent directory plus the working directory and its parents |
+| `AGENTS.override.md` | Replaces `AGENTS.md`/`CLAUDE.md` in the same directory only |
+| `SYSTEM.md` | Replaces Pi's default system prompt |
+| `APPEND_SYSTEM.md` | Adds to the system prompt |
+
+A context file applies to its directory and everything below it, so a project
+`AGENTS.md` covers the repository while the agent-directory file covers every
+session. For `SYSTEM.md` and `APPEND_SYSTEM.md`, the trusted project file
+replaces the agent-directory file; same-named files are not concatenated.
+`AGENTS.override.md` suppresses only its sibling file, not inherited context.
+
+Context files load without project trust, while `.pi/SYSTEM.md`,
+`.pi/APPEND_SYSTEM.md`, and project `.agents/skills` need it. That asymmetry is
+why instructions from an unfamiliar directory stay untrusted input even after
+trust is declined. Run `/reload` after editing any of them.
+
 ## Themes
 
 Pi ships `system`, `dark`, and `light`. `system` derives its palette from the

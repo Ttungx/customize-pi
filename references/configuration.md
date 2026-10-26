@@ -162,7 +162,16 @@ errors, which is why the default is off.
 ### Shell, resources, updates
 
 `shellPath` (leading `~` allowed), `shellCommandPrefix`, `npmCommand` (argv
-array, default `npm`). Resources: `packages`, `extensions`, `skills`, `prompts`,
+array, default `npm`). Bash aliases need the prefix, because Pi starts a
+non-interactive shell per command and non-interactive Bash does not expand
+aliases:
+
+```json
+{ "shellCommandPrefix": "shopt -s expand_aliases\nsource ~/.bash_aliases" }
+```
+
+Run `/reload`, then verify through Pi itself (`docs/shell-aliases.md`).
+Resources: `packages`, `extensions`, `skills`, `prompts`,
 `themes`, `enableSkillCommands` (`true`). Updates and telemetry:
 `collapseChangelog`, `enableInstallTelemetry`, `enableAnalytics`,
 `warnings.anthropicExtraUsage`.
@@ -217,6 +226,36 @@ belongs to the old runtime and must not reuse session-bound state.
 | `PI_TUI_ESC_TIMEOUT` | Escape disambiguation delay in ms |
 | `PI_SESSION_ID`, `PI_SESSION_FILE`, `PI_PROVIDER`, `PI_MODEL`, `PI_REASONING_LEVEL` | Exposed to tools and child processes |
 | `HTTP_PROXY`, `HTTPS_PROXY` | Proxy for Pi-managed HTTP clients |
+
+## Non-interactive runs
+
+Configuration work often has to be reproduced by a script or CI job. The same
+settings apply; the interface changes:
+
+| Need | Command |
+|---|---|
+| One prompt, then exit | `pi -p "..."`, with `@file` attachments and piped stdin |
+| JSONL events for a wrapper | `pi --mode json "..."` |
+| A long-lived process driven by a client | `pi --mode rpc` |
+| Session to HTML | `pi --export <session> [output]` |
+| Embedding Pi in another process | the SDK (`docs/sdk.md`) |
+
+JSON and RPC modes reserve stdout for protocol records, RPC rejects `@file`, and
+print mode exits non-zero when the final answer was cut off at the output limit
+— which matters when a script checks the exit code. SDK sessions do not load
+built-in extensions, so an SDK host has to add MCP, codemode, and tool search
+itself.
+
+## Migrating from another agent
+
+`CLAUDE.md` is read natively, so most Claude Code instruction files need no
+conversion. Skills follow the portable Agent Skills layout, so check frontmatter
+and bundled scripts instead of rewriting them into another format. For MCP,
+`docs/mcp.md#migrate-configuration-from-another-client` has the per-client
+conversions (Claude Desktop and Cursor copy as-is, VS Code needs `${NAME}`
+substitution, Codex is TOML, OpenCode renames fields), and `pi mcp list`
+validates the result. Change one surface at a time and keep the original
+configuration until the migrated part works.
 
 ## Sessions
 

@@ -5,8 +5,34 @@ The version number mirrors the Pi release the skill documents.
 ## 1.4.0 - 2026-10-21
 
 Re-verified the whole skill against Pi 1.4.0 and updated the 1.0-era content.
-The frontmatter now carries `version`, so the skill, the tag, and Pi's release
-number stay in one series.
+The frontmatter now carries the release as the `version` entry under `metadata`,
+so the skill, the tag, and Pi's release number stay in one series.
+
+### Second pass, same Pi version
+
+A philosophy pass rather than a version pass: audit the skill against its own
+contract — let a user make their agent change, debug, and tune their own Pi —
+and fill what the 1.0-era content never covered.
+
+- Added a mechanism-selection table to `SKILL.md`: the user's goal → context
+  file, system prompt, skill, prompt template, settings, keybindings or theme,
+  extension, package, or an isolated experiment. Choosing the surface is the
+  first decision, and the skill previously jumped straight to file paths.
+- Added diagnosis triage for the "it doesn't work" requests the philosophy
+  promises to serve: which layer failed (scope, trust, load, override) for
+  settings, tools, resources, MCP, and models, plus `/debug` and `pi-debug.log`.
+- Added a read-only configuration audit checklist: shadowed scopes, legacy keys,
+  misplaced secrets, unreviewed executable input, cost and context pressure, and
+  stale resumed-session state.
+- Added context and system-prompt guidance for `AGENTS.md`,
+  `AGENTS.override.md`, `SYSTEM.md`, and `APPEND_SYSTEM.md`, including the trust
+  asymmetry between context files and project system-prompt files.
+- Moved the release marker under `metadata`. A top-level `version` key is outside
+  the Agent Skills frontmatter and fails skill-creator's `quick_validate.py`;
+  Pi's loader tolerates it, portable consumers do not.
+- Added routes that were missing entirely: non-interactive runs (`-p`,
+  `--mode json`/`rpc`, `--export`, SDK), local llama.cpp models, Bash alias
+  setup through `shellCommandPrefix`, and migration from another agent.
 
 ### Corrected
 
